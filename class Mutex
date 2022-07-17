@@ -1,0 +1,74 @@
+var TheCopyRightNotice      = `Copyright © 2020-2022 Denis Cote ThinknSpeak`;
+
+class Mutex {
+  constructor() {
+    this._lock                = Promise.resolve();
+    NameThisObject            = function (ThisObject, ThisName){
+      Object.defineProperty(ThisObject, 'name', {
+        value: ThisName,
+        configurable: true,
+      });
+    }
+    NameThisObject (this._lock, "Init_NextLock");
+    this.LockStack            = [];
+
+    this.IsLocked             = function (){
+      return this._lock;
+    }
+  }
+  _acquire(ThisName) {
+      var release;
+      const lock = this._lock = new Promise(resolve => {
+          release = resolve;
+      });
+      NameThisObject (this._lock, ThisName + "_NextLock");
+      this._lock["State"]     = "pending";
+      NameThisObject (release,    ThisName + "_NextRelease");
+      this.LockStack.push       (release);
+      release["State"]        = "pending";
+      return release;
+  }
+  AcquireNextLock(ThisName) {
+      const  ThisQ            = this._lock.then(() => 
+        release
+      );
+      const  release          = this._acquire(ThisName);
+      return ThisQ;
+  }
+  Execute = async function (ThisName, ThisCallBack) {
+    console.log(ThisName + " Requesting lock");
+    let ThisRet = null;
+
+    let ThisUnlockFnc         = await this.AcquireNextLock(ThisName); 
+
+    console.log(ThisName, ThisUnlockFnc, "acquired lock");
+    
+    if(typeof ThisCallBack  === 'function'){
+      console.log(ThisName, "Executing with", ThisUnlockFnc, "On this", ThisCallBack);
+      ThisRet                 = await ThisCallBack.call(this, ThisName, ThisUnlockFnc);
+    }
+    ThisUnlockFnc.State       = "fulfilled";
+    ThisUnlockFnc(ThisRet); 
+    console.log(ThisName + " Released lock with ", ThisRet);
+  }
+}
+// /*
+// EXAMPLE:
+const TheMutex              = new Mutex();
+async function Executor (ThisName, ThisLock){
+  console.log(ThisName + " Running...", ThisLock, this.IsLocked());
+  for(let Each             in TheMutex.LockStack){
+    let ThatLock            = TheMutex.LockStack[Each];
+    console.log(ThatLock.name + " Status:", ThatLock, ThatLock.State);
+  }
+  await WaitDelay(10000);
+  return ThisName + " Succeeded";
+}
+
+TheMutex.Execute("A", Executor);
+TheMutex.Execute("B", Executor);
+TheMutex.Execute("C", Executor);
+TheMutex.Execute("D", Executor);
+
+// */
+
